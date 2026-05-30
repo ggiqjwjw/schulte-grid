@@ -46,14 +46,6 @@ h1{font-size:28px;margin-bottom:8px;color:#fff;letter-spacing:2px}
 .clear-lb{text-align:center;margin-top:10px}
 .clear-lb button{font-size:12px;background:none;color:#555;border:none;cursor:pointer}
 .clear-lb button:hover{color:#e55}
-.sync-toggle{margin-top:12px}
-.sync-toggle button{font-size:12px;background:none;color:#555;border:none;cursor:pointer}
-.sync-toggle button:hover{color:#4fc3f7}
-.sync-panel{margin-top:10px;padding:12px;background:#111122;border-radius:8px;border:1px solid #1a1a3a;max-width:340px;margin-left:auto;margin-right:auto}
-.sync-hint{font-size:12px;color:#666;margin-bottom:8px}
-.sync-btns{display:flex;justify-content:center;gap:8px;margin-top:8px}
-.sync-btns .btn{padding:6px 18px;font-size:13px}
-.sync-status{font-size:12px;color:#4caf84;margin-top:8px;min-height:18px}
 
 /* ── 手机端优化 ── */
 @media (max-width: 500px) {
@@ -97,16 +89,6 @@ h1{font-size:28px;margin-bottom:8px;color:#fff;letter-spacing:2px}
 <h3>排行榜</h3>
 <table class="lb-table"><thead><tr><th class="rank">#</th><th>名字</th><th>用时</th><th class="date-cell">日期</th></tr></thead><tbody id="lbBody"></tbody></table>
 <div class="clear-lb"><button id="clearBtn">清空排行榜</button></div>
-<div class="sync-toggle"><button id="syncToggle">☁️ 云同步设置</button></div>
-<div class="sync-panel" id="syncPanel" style="display:none">
-  <p class="sync-hint">填入 GitHub Token（gist 权限）开启云端排行榜同步</p>
-  <input id="tokenInput" class="user-input" placeholder="ghp_xxx..." autocomplete="off" style="width:100%;max-width:300px">
-  <div class="sync-btns">
-    <button class="btn" id="saveToken">保存</button>
-    <button class="btn" id="delToken">清除</button>
-  </div>
-  <p class="sync-status" id="syncStatus"></p>
-</div>
 </div>
 </div>
 <script>
@@ -127,20 +109,17 @@ uel.value=localStorage.getItem(UK)||"";
 uel.addEventListener("input",function(){localStorage.setItem(UK,uel.value)});
 uel.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();uel.blur()}});
 
-// GitHub Gist backend (token configurable, default localStorage-only)
+// GitHub Gist backend
 var GIST_ID="2f791cb25e28f699a229fe05338c2e89";
 var API_URL="https://api.github.com/gists/"+GIST_ID;
-var TK="schulte_gh_token";
+var TOKEN="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";
 var LK="schulte_10x10_cache";
 var lbCache=null;
-function getToken(){return localStorage.getItem(TK)||""}
 
 // ── fetch leaderboard from Gist (use API to avoid CDN cache) ──
 function fetchLB(cb){
-  var tk=getToken();
-  if(!tk){loadLocal(cb);return}
   fetch(API_URL,{
-    headers:{"Authorization":"token "+tk}
+    headers:{"Authorization":"token "+TOKEN}
   })
     .then(function(r){return r.json()})
     .then(function(data){
@@ -149,30 +128,19 @@ function fetchLB(cb){
       if(cb)cb(lbCache);
     })
     .catch(function(){
-      loadLocal(cb);
+      try{lbCache=JSON.parse(localStorage.getItem(LK))||[]}catch(e){lbCache=[]}
+      if(cb)cb(lbCache);
     });
-}
-function loadLocal(cb){
-  try{lbCache=JSON.parse(localStorage.getItem(LK))||[]}catch(e){lbCache=[]}
-  if(cb)cb(lbCache);
 }
 
 // ── save leaderboard to Gist ──
 function saveLB(data,cb){
-  var tk=getToken();
-  if(!tk){
-    // no token: save locally only
-    localStorage.setItem(LK,JSON.stringify(data));
-    lbCache=data;
-    if(cb)cb(data);
-    return;
-  }
   var payload={
     files:{"leaderboard.json":{content:JSON.stringify(data)}}
   };
   fetch(API_URL,{
     method:"PATCH",
-    headers:{"Authorization":"token "+tk,"Content-Type":"application/json"},
+    headers:{"Authorization":"token "+TOKEN,"Content-Type":"application/json"},
     body:JSON.stringify(payload)
   })
     .then(function(r){return r.json()})
@@ -267,27 +235,7 @@ document.getElementById("clearBtn").addEventListener("click",function(){
   }
 });
 
-// ── token settings panel ──
-document.getElementById("syncToggle").addEventListener("click",function(){
-  var p=document.getElementById("syncPanel");
-  p.style.display=p.style.display==="none"?"block":"none";
-  if(p.style.display==="block"){
-    document.getElementById("tokenInput").value=getToken();
-    document.getElementById("syncStatus").textContent=getToken()?"✅ 已配置云同步":"⚡ 当前仅本地存储";
-  }
-});
-document.getElementById("saveToken").addEventListener("click",function(){
-  var v=document.getElementById("tokenInput").value.trim();
-  if(v){localStorage.setItem(TK,v);document.getElementById("syncStatus").textContent="✅ 已保存，重新加载生效"}
-  else{document.getElementById("syncStatus").textContent="⚠️ 请输入有效的 Token"}
-});
-document.getElementById("delToken").addEventListener("click",function(){
-  localStorage.removeItem(TK);
-  document.getElementById("tokenInput").value="";
-  document.getElementById("syncStatus").textContent="🗑️ 已清除，当前仅本地存储";
-});
-
-// ── init: load from Gist if token available, then render ──
+// ── init: load from Gist, then render ──
 fetchLB(function(data){renderLB(data)});
 bg();
 })();
