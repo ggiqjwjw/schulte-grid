@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>舒特尔方格 10x10</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Segoe UI","Microsoft YaHei",sans-serif;background:#0f0f1a;color:#e0e0e0;display:flex;justify-content:center;align-items:center;min-height:100vh;user-select:none}
+.container{text-align:center;max-width:700px;width:100%;padding:20px}
+h1{font-size:28px;margin-bottom:8px;color:#fff;letter-spacing:2px}
+.subtitle{font-size:13px;color:#666;margin-bottom:16px}
+.user-row{margin-bottom:14px}
+.user-input{background:#1a1a2e;border:1px solid #2a2a4a;border-radius:8px;padding:8px 16px;color:#ccc;font-size:15px;width:180px;text-align:center;outline:none;font-family:inherit;transition:border-color .2s}
+.user-input:focus{border-color:#00e5ff}
+.user-input::placeholder{color:#555}
+.timer-box{background:#1a1a2e;border-radius:12px;padding:12px 28px;display:inline-block;margin-bottom:16px;border:1px solid #2a2a4a}
+.timer-label{font-size:12px;color:#777}
+.timer-value{font-size:40px;font-weight:700;color:#00e5ff;font-variant-numeric:tabular-nums}
+.next-num{font-size:14px;color:#888;margin-top:4px}
+.next-num span{color:#ffb74d;font-weight:700;font-size:18px}
+.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;max-width:620px;margin:0 auto 20px;aspect-ratio:1;touch-action:manipulation}
+.cell{background:#1a1a3a;border:1px solid #2a2a5a;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:clamp(13px,3.5vw,18px);font-weight:700;color:#ccc;transition:background .08s,transform .08s;aspect-ratio:1;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.cell:hover{background:#252550}
+.cell:active{transform:scale(.9)}
+.cell.done{background:#0d3320;border-color:#1a5a3a;color:#4caf84;cursor:default}
+.cell.done:hover{background:#0d3320}
+.cell.wrong{background:#5a1a1a;border-color:#8b2020;color:#ff6e6e;animation:shake .35s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+.btn{background:#24245a;color:#ccc;border:1px solid #3a3a7a;border-radius:8px;padding:10px 28px;font-size:15px;cursor:pointer;transition:background .15s;margin:4px;font-family:inherit}
+.btn:hover{background:#30307a}
+.btn.primary{background:#2e5a4a;border-color:#3a7a5a}
+.btn.primary:hover{background:#3a7a5a}
+.leaderboard{margin-top:24px;text-align:left;max-width:500px;margin-left:auto;margin-right:auto}
+.leaderboard h3{font-size:15px;color:#aaa;margin-bottom:10px;text-align:center;letter-spacing:1px}
+.lb-table{width:100%;border-collapse:collapse;font-size:14px}
+.lb-table th{color:#777;font-weight:400;padding:6px 12px;border-bottom:1px solid #1a1a3a}
+.lb-table td{padding:8px 12px;border-bottom:1px solid #1a1a2e}
+.rank{width:36px;text-align:center}
+.rank-1{color:#ffd700;font-weight:700}
+.rank-2{color:#c0c0c0;font-weight:700}
+.rank-3{color:#cd7f32;font-weight:700}
+.time-cell{text-align:center;font-variant-numeric:tabular-nums;color:#00e5ff}
+.date-cell{text-align:right;color:#666;font-size:12px}
+.empty-lb{text-align:center;color:#444;padding:20px;font-size:14px}
+.clear-lb{text-align:center;margin-top:10px}
+.clear-lb button{font-size:12px;background:none;color:#555;border:none;cursor:pointer}
+.clear-lb button:hover{color:#e55}
+.sync-toggle{margin-top:12px}
+.sync-toggle button{font-size:12px;background:none;color:#555;border:none;cursor:pointer}
+.sync-toggle button:hover{color:#4fc3f7}
+.sync-panel{margin-top:10px;padding:12px;background:#111122;border-radius:8px;border:1px solid #1a1a3a;max-width:340px;margin-left:auto;margin-right:auto}
+.sync-hint{font-size:12px;color:#666;margin-bottom:8px}
+.sync-btns{display:flex;justify-content:center;gap:8px;margin-top:8px}
+.sync-btns .btn{padding:6px 18px;font-size:13px}
+.sync-status{font-size:12px;color:#4caf84;margin-top:8px;min-height:18px}
+
+/* ── 手机端优化 ── */
+@media (max-width: 500px) {
+  .container{padding:10px 8px}
+  h1{font-size:20px;letter-spacing:1px}
+  .subtitle{font-size:11px;margin-bottom:10px}
+  .timer-value{font-size:32px}
+  .grid{gap:2px;margin-bottom:12px}
+  .cell{font-size:clamp(11px,4vw,16px);border-radius:3px}
+  .btn{padding:8px 20px;font-size:14px}
+  .user-input{width:150px;font-size:14px;padding:6px 12px}
+  .leaderboard{max-width:100%;margin-top:16px}
+  .leaderboard h3{font-size:13px}
+  .lb-table{font-size:12px}
+  .lb-table th,.lb-table td{padding:5px 8px}
+  .date-cell{display:none}
+}
+@media (max-width: 380px) {
+  .cell{font-size:clamp(10px,4.2vw,14px)}
+  .grid{gap:1.5px}
+  .next-num{font-size:12px}
+  .next-num span{font-size:15px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>舒特尔方格</h1>
+<div class="subtitle">10 x 10 · 按顺序从1点到100</div>
+<div class="user-row">
+  <input id="userInput" class="user-input" placeholder="输入你的名字" maxlength="12" autocomplete="off">
+</div>
+<div class="timer-box">
+<div class="timer-label" id="timerLabel">用时</div>
+<div class="timer-value" id="timer">00:00.00</div>
+<div class="next-num">下一个: <span id="nextNum">1</span></div>
+</div>
+<div class="grid" id="grid"></div>
+<button class="btn primary" id="restartBtn">重新开始</button>
+<div class="leaderboard">
+<h3>排行榜</h3>
+<table class="lb-table"><thead><tr><th class="rank">#</th><th>名字</th><th>用时</th><th class="date-cell">日期</th></tr></thead><tbody id="lbBody"></tbody></table>
+<div class="clear-lb"><button id="clearBtn">清空排行榜</button></div>
+<div class="sync-toggle"><button id="syncToggle">☁️ 云同步设置</button></div>
+<div class="sync-panel" id="syncPanel" style="display:none">
+  <p class="sync-hint">填入 GitHub Token（gist 权限）开启云端排行榜同步</p>
+  <input id="tokenInput" class="user-input" placeholder="ghp_xxx..." autocomplete="off" style="width:100%;max-width:300px">
+  <div class="sync-btns">
+    <button class="btn" id="saveToken">保存</button>
+    <button class="btn" id="delToken">清除</button>
+  </div>
+  <p class="sync-status" id="syncStatus"></p>
+</div>
+</div>
+</div>
+<script>
+(function(){
+var S=10,T=100,nums=[],next=1,run=false,start=null,iv=null,done=false;
+var g=document.getElementById("grid");
+var t=document.getElementById("timer");
+var tl=document.getElementById("timerLabel");
+var nn=document.getElementById("nextNum");
+var ns=document.getElementById("nextSpan");
+var elb=document.getElementById("lbBody");
+var uel=document.getElementById("userInput");
+var ranks=["rank-1","rank-2","rank-3"];
+
+// username
+var UK="schulte_username";
+uel.value=localStorage.getItem(UK)||"";
+uel.addEventListener("input",function(){localStorage.setItem(UK,uel.value)});
+uel.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();uel.blur()}});
+
+// GitHub Gist backend (token configurable, default localStorage-only)
+var GIST_ID="2f791cb25e28f699a229fe05338c2e89";
+var API_URL="https://api.github.com/gists/"+GIST_ID;
+var TK="schulte_gh_token";
+var LK="schulte_10x10_cache";
+var lbCache=null;
+function getToken(){return localStorage.getItem(TK)||""}
+
+// ── fetch leaderboard from Gist (use API to avoid CDN cache) ──
+function fetchLB(cb){
+  var tk=getToken();
+  if(!tk){loadLocal(cb);return}
+  fetch(API_URL,{
+    headers:{"Authorization":"token "+tk}
+  })
+    .then(function(r){return r.json()})
+    .then(function(data){
+      lbCache=JSON.parse(data.files["leaderboard.json"].content);
+      localStorage.setItem(LK,JSON.stringify(lbCache));
+      if(cb)cb(lbCache);
+    })
+    .catch(function(){
+      loadLocal(cb);
+    });
+}
+function loadLocal(cb){
+  try{lbCache=JSON.parse(localStorage.getItem(LK))||[]}catch(e){lbCache=[]}
+  if(cb)cb(lbCache);
+}
+
+// ── save leaderboard to Gist ──
+function saveLB(data,cb){
+  var tk=getToken();
+  if(!tk){
+    // no token: save locally only
+    localStorage.setItem(LK,JSON.stringify(data));
+    lbCache=data;
+    if(cb)cb(data);
+    return;
+  }
+  var payload={
+    files:{"leaderboard.json":{content:JSON.stringify(data)}}
+  };
+  fetch(API_URL,{
+    method:"PATCH",
+    headers:{"Authorization":"token "+tk,"Content-Type":"application/json"},
+    body:JSON.stringify(payload)
+  })
+    .then(function(r){return r.json()})
+    .then(function(resp){
+      lbCache=data;
+      localStorage.setItem(LK,JSON.stringify(data));
+      if(cb)cb(data);
+    })
+    .catch(function(){
+      // save locally if API fails
+      localStorage.setItem(LK,JSON.stringify(data));
+      lbCache=data;
+      if(cb)cb(data);
+    });
+}
+
+// ── add score to leaderboard ──
+function addScore(elapsed,dateStr,name,cb){
+  fetchLB(function(data){
+    data.push({time:elapsed,date:dateStr,name:name||"匿名"});
+    data.sort(function(a,b){return a.time-b.time});
+    if(data.length>30)data.length=30;
+    saveLB(data,cb);
+  });
+}
+
+// ── render leaderboard table ──
+function renderLB(data){
+  var d=data||lbCache||[];
+  if(!d.length){
+    elb.innerHTML='<tr><td colspan="4" class="empty-lb">暂无记录，快来挑战！</td></tr>';
+    return;
+  }
+  var h='';
+  d.forEach(function(e,i){
+    var rc=i<3?ranks[i]:'';
+    h+='<tr><td class="rank '+rc+'">'+(i+1)+'</td><td>'+(e.name||'匿名')+'</td><td class="time-cell">'+ft(e.time)+'</td><td class="date-cell">'+e.date+'</td></tr>';
+  });
+  elb.innerHTML=h;
+}
+
+// ── utilities ──
+function sh(a){var b=[].concat(a);for(var i=b.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),x=b[i];b[i]=b[j];b[j]=x}return b}
+function ft(ms){var s=ms/1000,m=Math.floor(s/60),se=Math.floor(s%60),c=Math.floor((s%1)*100);return String(m).padStart(2,"0")+":"+String(se).padStart(2,"0")+"."+String(c).padStart(2,"0")}
+function up(){/* blind mode: track time but don't display */if(start){}}
+function st(){if(!run){run=true;start=Date.now();t.textContent="--:--.--";tl.textContent="计时中";tl.style.color="#ffb74d";iv=setInterval(up,40)}}
+function sp(){clearInterval(iv);iv=null;run=false;return start?Date.now()-start:0}
+
+function dateStr(){
+  var n=new Date();
+  return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0")+" "+String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0");
+}
+
+function bg(){
+  nums=[];for(var i=1;i<=T;i++)nums.push(i);nums=sh(nums);
+  g.innerHTML="";
+  nums.forEach(function(n){
+    var c=document.createElement("div");c.className="cell";c.textContent=n;c.dataset.num=n;
+    c.addEventListener("click",function(){cl(c,n)});g.appendChild(c);
+  });
+}
+
+function cl(cell,num){
+  if(done||cell.classList.contains("done"))return;
+  if(!run)st();
+  if(num===next){
+    cell.classList.add("done");next++;nn.textContent=next;
+    if(next>T){
+      done=true;var el=sp();
+      t.textContent=ft(el);t.style.color="#4caf84";tl.textContent="完成！";tl.style.color="#4caf84";
+      nn.textContent="done";
+      nn.parentElement.querySelector("span").textContent="完成!";
+      var name=uel.value.trim()||"匿名";
+      addScore(el,dateStr(),name,function(data){renderLB(data)});
+    }
+  }else{
+    cell.classList.add("wrong");setTimeout(function(){cell.classList.remove("wrong")},350);
+  }
+}
+
+function rs(){
+  sp();run=false;done=false;start=null;next=1;
+  t.textContent="00:00.00";t.style.color="#00e5ff";tl.textContent="用时";tl.style.color="#777";
+  nn.textContent="1";nn.parentElement.querySelector("span").textContent="1";
+  bg();
+}
+
+document.getElementById("restartBtn").addEventListener("click",rs);
+document.getElementById("clearBtn").addEventListener("click",function(){
+  if(confirm("确认清空排行榜？云端数据也会同步清空！")){
+    saveLB([],function(data){renderLB(data)});
+  }
+});
+
+// ── token settings panel ──
+document.getElementById("syncToggle").addEventListener("click",function(){
+  var p=document.getElementById("syncPanel");
+  p.style.display=p.style.display==="none"?"block":"none";
+  if(p.style.display==="block"){
+    document.getElementById("tokenInput").value=getToken();
+    document.getElementById("syncStatus").textContent=getToken()?"✅ 已配置云同步":"⚡ 当前仅本地存储";
+  }
+});
+document.getElementById("saveToken").addEventListener("click",function(){
+  var v=document.getElementById("tokenInput").value.trim();
+  if(v){localStorage.setItem(TK,v);document.getElementById("syncStatus").textContent="✅ 已保存，重新加载生效"}
+  else{document.getElementById("syncStatus").textContent="⚠️ 请输入有效的 Token"}
+});
+document.getElementById("delToken").addEventListener("click",function(){
+  localStorage.removeItem(TK);
+  document.getElementById("tokenInput").value="";
+  document.getElementById("syncStatus").textContent="🗑️ 已清除，当前仅本地存储";
+});
+
+// ── init: load from Gist if token available, then render ──
+fetchLB(function(data){renderLB(data)});
+bg();
+})();
+</script>
+</body>
+</html>
